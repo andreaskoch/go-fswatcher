@@ -2,8 +2,6 @@
 
 Watch a file or folder for changes and execute a custom command.
 
-
-
 ## Usage
 
 ### Watch a file for changes
