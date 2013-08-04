@@ -11,11 +11,14 @@ import (
 
 const (
 	defaultRecurse = false
+	defaultCommand = ""
 )
 
 type WatcherSettings struct {
 	Path    string
 	Recurse bool
+
+	Command string
 }
 
 var Settings WatcherSettings = WatcherSettings{}
@@ -31,4 +34,6 @@ func init() {
 	flag.StringVar(&Settings.Path, "path", defaultPath, "The file or directory to watch")
 
 	flag.BoolVar(&Settings.Recurse, "recurse", defaultRecurse, "A flag indicating whether to recurse or not")
+
+	flag.StringVar(&Settings.Command, "command", defaultCommand, "A command that will be executed every time something changed")
 }

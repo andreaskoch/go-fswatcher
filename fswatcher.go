@@ -11,9 +11,15 @@ import (
 	"flag"
 	"fmt"
 	"github.com/andreaskoch/go-fswatch"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+)
+
+var (
+	workingDirectory string
 )
 
 const (
@@ -23,6 +29,17 @@ const (
 var usage = func() {
 	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 	flag.PrintDefaults()
+}
+
+func init() {
+
+	// determine the current working directory
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	workingDirectory = wd
+
 }
 
 func main() {
@@ -68,11 +85,11 @@ func main() {
 			return ""
 		})())
 
-		watchDirectory(Settings.Path, Settings.Recurse, stopFilesystemWatcher)
+		watchDirectory(Settings.Path, Settings.Recurse, Settings.Command, stopFilesystemWatcher)
 
 	} else {
 		fmt.Printf("Watching file %q.\n", Settings.Path)
-		watchFile(Settings.Path, stopFilesystemWatcher)
+		watchFile(Settings.Path, Settings.Command, stopFilesystemWatcher)
 	}
 
 	// stop checker
@@ -107,7 +124,7 @@ func main() {
 	os.Exit(0)
 }
 
-func watchDirectory(directoryPath string, recurse bool, stop chan bool) {
+func watchDirectory(directoryPath string, recurse bool, commandText string, stop chan bool) {
 
 	skipFiles := func(path string) bool {
 		return false
@@ -122,6 +139,10 @@ func watchDirectory(directoryPath string, recurse bool, stop chan bool) {
 			case <-folderWatcher.Change:
 				fmt.Printf("Directory %q changed.\n", directoryPath)
 
+				go func() {
+					execute(commandText)
+				}()
+
 			case <-stop:
 				fmt.Printf("Stopping directory watcher for %q.\n", directoryPath)
 				folderWatcher.Stop()
@@ -135,7 +156,7 @@ func watchDirectory(directoryPath string, recurse bool, stop chan bool) {
 	}()
 }
 
-func watchFile(filePath string, stop chan bool) {
+func watchFile(filePath string, commandText string, stop chan bool) {
 
 	go func() {
 		fileWatcher := fswatch.NewFileWatcher(filePath).Start()
@@ -146,8 +167,16 @@ func watchFile(filePath string, stop chan bool) {
 			case <-fileWatcher.Modified:
 				fmt.Printf("File %q has been modified.\n", filePath)
 
+				go func() {
+					execute(commandText)
+				}()
+
 			case <-fileWatcher.Moved:
 				fmt.Printf("File %q has been moved.\n", filePath)
+
+				go func() {
+					execute(commandText)
+				}()
 
 			case <-stop:
 				fmt.Printf("Stopping file watcher for %q.\n", filePath)
@@ -160,4 +189,62 @@ func watchFile(filePath string, stop chan bool) {
 
 		fmt.Printf("Watcher for file %q stopped.\n", filePath)
 	}()
+}
+
+func execute(commandText string) {
+
+	fmt.Printf("Executing command: %s\n", commandText)
+	fmt.Println()
+
+	command := getCmd(commandText)
+	if err := command.Start(); err != nil {
+		fmt.Printf("Launch error: %s\n", err)
+	}
+}
+
+func getCmd(commandText string) *exec.Cmd {
+	if commandText == "" {
+		return nil
+	}
+
+	components := strings.Split(commandText, " ")
+
+	// get the command name
+	commandName := components[0]
+
+	// get the command arguments
+	arguments := make([]string, 0)
+	if len(components) > 1 {
+		arguments = components[1:]
+	}
+
+	// create the command
+	command := exec.Command(commandName, arguments...)
+
+	// set the working directory
+	command.Dir = workingDirectory
+
+	// redirect command io
+	redirectCommandIO(command)
+
+	return command
+}
+
+func redirectCommandIO(cmd *exec.Cmd) (*os.File, error) {
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	go io.Copy(os.Stdout, stdout)
+	go io.Copy(os.Stderr, stderr)
+
+	//direct. Masked passwords work OK!
+	cmd.Stdin = os.Stdin
+	return nil, err
 }
