@@ -124,27 +124,27 @@ func main() {
 	os.Exit(0)
 }
 
-func watchDirectory(directoryPath string, recurse bool, commandText string, stop chan bool) {
+func watchDirectory(directory string, recurse bool, commandText string, stop chan bool) {
 
 	skipFiles := func(path string) bool {
 		return false
 	}
 
 	go func() {
-		folderWatcher := fswatch.NewFolderWatcher(directoryPath, recurse, skipFiles).Start()
+		folderWatcher := fswatch.NewFolderWatcher(directory, recurse, skipFiles).Start()
 
 		for folderWatcher.IsRunning() {
 
 			select {
 			case <-folderWatcher.Change:
-				fmt.Printf("Directory %q changed.\n", directoryPath)
+				fmt.Printf("Directory %q changed.\n", directory)
 
 				go func() {
-					execute(commandText)
+					execute(directory, commandText)
 				}()
 
 			case <-stop:
-				fmt.Printf("Stopping directory watcher for %q.\n", directoryPath)
+				fmt.Printf("Stopping directory watcher for %q.\n", directory)
 				folderWatcher.Stop()
 
 			case <-folderWatcher.Stopped:
@@ -152,34 +152,36 @@ func watchDirectory(directoryPath string, recurse bool, commandText string, stop
 			}
 		}
 
-		fmt.Printf("Watcher for directory %q stopped.\n", directoryPath)
+		fmt.Printf("Watcher for directory %q stopped.\n", directory)
 	}()
 }
 
-func watchFile(filePath string, commandText string, stop chan bool) {
+func watchFile(file string, commandText string, stop chan bool) {
+
+	directory := filepath.Dir(file)
 
 	go func() {
-		fileWatcher := fswatch.NewFileWatcher(filePath).Start()
+		fileWatcher := fswatch.NewFileWatcher(file).Start()
 
 		for fileWatcher.IsRunning() {
 
 			select {
 			case <-fileWatcher.Modified:
-				fmt.Printf("File %q has been modified.\n", filePath)
+				fmt.Printf("File %q has been modified.\n", file)
 
 				go func() {
-					execute(commandText)
+					execute(directory, commandText)
 				}()
 
 			case <-fileWatcher.Moved:
-				fmt.Printf("File %q has been moved.\n", filePath)
+				fmt.Printf("File %q has been moved.\n", file)
 
 				go func() {
-					execute(commandText)
+					execute(directory, commandText)
 				}()
 
 			case <-stop:
-				fmt.Printf("Stopping file watcher for %q.\n", filePath)
+				fmt.Printf("Stopping file watcher for %q.\n", file)
 				fileWatcher.Stop()
 
 			case <-fileWatcher.Stopped:
@@ -187,22 +189,22 @@ func watchFile(filePath string, commandText string, stop chan bool) {
 			}
 		}
 
-		fmt.Printf("Watcher for file %q stopped.\n", filePath)
+		fmt.Printf("Watcher for file %q stopped.\n", file)
 	}()
 }
 
-func execute(commandText string) {
+func execute(directory, commandText string) {
 
 	fmt.Printf("Executing command: %s\n", commandText)
 	fmt.Println()
 
-	command := getCmd(commandText)
+	command := getCmd(directory, commandText)
 	if err := command.Start(); err != nil {
 		fmt.Printf("Launch error: %s\n", err)
 	}
 }
 
-func getCmd(commandText string) *exec.Cmd {
+func getCmd(directory, commandText string) *exec.Cmd {
 	if commandText == "" {
 		return nil
 	}
@@ -222,7 +224,7 @@ func getCmd(commandText string) *exec.Cmd {
 	command := exec.Command(commandName, arguments...)
 
 	// set the working directory
-	command.Dir = workingDirectory
+	command.Dir = directory
 
 	// redirect command io
 	redirectCommandIO(command)
