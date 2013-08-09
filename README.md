@@ -1,4 +1,4 @@
-# fswatcher
+# go-fswatcher
 
 Watch a file or folder for changes and execute a custom command.
 
@@ -20,6 +20,16 @@ If you want to watch for changes recursivly you can add the `recurse` option:
 
 ```bash
 go-fswatcher -path some-folder -recurse -command "some-command"
+```
+
+## Examples
+
+### Using go-fswatcher to autobuild your go applications
+
+Build your go application everytime a file changes in your package directory.
+
+```bash
+go-fswatcher -path $GOPATH/src/github.com/andreaskoch/allmark -recurse -command "go install"
 ```
 
 ## Build Status
