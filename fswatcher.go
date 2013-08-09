@@ -27,7 +27,7 @@ const (
 )
 
 var usage = func() {
-	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+	message("Usage of %s:\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
@@ -45,7 +45,7 @@ func init() {
 func main() {
 
 	// print application info
-	fmt.Printf("%s (Version: %s)\n\n", os.Args[0], VERSION)
+	message("%s (Version: %s)\n\n", os.Args[0], VERSION)
 
 	// print usage information if no arguments are supplied
 	if len(os.Args) == 1 {
@@ -58,7 +58,7 @@ func main() {
 
 	// check if the supplied path exists
 	if !pathExists(Settings.Path) {
-		fmt.Printf("Path %q does not exist.\n", Settings.Path)
+		message("Path %q does not exist.", Settings.Path)
 		os.Exit(1)
 	}
 
@@ -68,7 +68,7 @@ func main() {
 	// normalize the path
 	absolutePath, err := filepath.Abs(Settings.Path)
 	if err != nil {
-		fmt.Printf("Cannot determine the absolute path from %q.", Settings.Path)
+		message("Cannot determine the absolute path from %q.", Settings.Path)
 		os.Exit(1)
 	}
 
@@ -78,7 +78,7 @@ func main() {
 	stopFilesystemWatcher := make(chan bool, 1)
 	if ok, _ := isDirectory(Settings.Path); ok {
 
-		fmt.Printf("Watching directory %q%s.\n", Settings.Path, (func() string {
+		message("Watching directory %q%s.", Settings.Path, (func() string {
 			if Settings.Recurse {
 				return " (recursive)"
 			}
@@ -88,12 +88,12 @@ func main() {
 		watchDirectory(Settings.Path, Settings.Recurse, Settings.Command, stopFilesystemWatcher)
 
 	} else {
-		fmt.Printf("Watching file %q.\n", Settings.Path)
+		message("Watching file %q.", Settings.Path)
 		watchFile(Settings.Path, Settings.Command, stopFilesystemWatcher)
 	}
 
 	// stop checker
-	fmt.Println(`Write "stop" and press <Enter> to stop.`)
+	message(`Write "stop" and press <Enter> to stop.`)
 
 	stopApplication := make(chan bool, 1)
 	go func() {
@@ -108,7 +108,8 @@ func main() {
 
 			if command := strings.ToLower(strings.TrimSpace(userInput)); command == "stop" {
 
-				fmt.Println()
+				// empty line
+				message("")
 
 				stopFilesystemWatcher <- true
 				stopApplication <- true
@@ -118,7 +119,7 @@ func main() {
 
 	select {
 	case <-stopApplication:
-		fmt.Printf("Stopped watching %q.\n", Settings.Path)
+		debug("Stopped watching %q.", Settings.Path)
 	}
 
 	os.Exit(0)
@@ -137,14 +138,14 @@ func watchDirectory(directory string, recurse bool, commandText string, stop cha
 
 			select {
 			case <-folderWatcher.Change:
-				fmt.Printf("Directory %q changed.\n", directory)
+				debug("Directory %q changed.", directory)
 
 				go func() {
 					execute(directory, commandText)
 				}()
 
 			case <-stop:
-				fmt.Printf("Stopping directory watcher for %q.\n", directory)
+				debug("Stopping directory watcher for %q.", directory)
 				folderWatcher.Stop()
 
 			case <-folderWatcher.Stopped:
@@ -152,7 +153,7 @@ func watchDirectory(directory string, recurse bool, commandText string, stop cha
 			}
 		}
 
-		fmt.Printf("Watcher for directory %q stopped.\n", directory)
+		debug("Watcher for directory %q stopped.", directory)
 	}()
 }
 
@@ -167,21 +168,21 @@ func watchFile(file string, commandText string, stop chan bool) {
 
 			select {
 			case <-fileWatcher.Modified:
-				fmt.Printf("File %q has been modified.\n", file)
+				debug("File %q has been modified.", file)
 
 				go func() {
 					execute(directory, commandText)
 				}()
 
 			case <-fileWatcher.Moved:
-				fmt.Printf("File %q has been moved.\n", file)
+				debug("File %q has been moved.", file)
 
 				go func() {
 					execute(directory, commandText)
 				}()
 
 			case <-stop:
-				fmt.Printf("Stopping file watcher for %q.\n", file)
+				debug("Stopping file watcher for %q.", file)
 				fileWatcher.Stop()
 
 			case <-fileWatcher.Stopped:
@@ -189,19 +190,24 @@ func watchFile(file string, commandText string, stop chan bool) {
 			}
 		}
 
-		fmt.Printf("Watcher for file %q stopped.\n", file)
+		debug("Watcher for file %q stopped.", file)
 	}()
 }
 
 func execute(directory, commandText string) {
 
-	fmt.Printf("Executing command: %s\n", commandText)
-	fmt.Println()
-
+	// get the command
 	command := getCmd(directory, commandText)
+
+	// execute the command
 	if err := command.Start(); err != nil {
-		fmt.Printf("Launch error: %s\n", err)
+		fmt.Println(err)
 	}
+
+	// wait for the command to finish
+	command.Wait()
+
+	fmt.Println()
 }
 
 func getCmd(directory, commandText string) *exec.Cmd {
@@ -249,4 +255,22 @@ func redirectCommandIO(cmd *exec.Cmd) (*os.File, error) {
 	//direct. Masked passwords work OK!
 	cmd.Stdin = os.Stdin
 	return nil, err
+}
+
+func debug(text string, args ...interface{}) {
+	if !Settings.Verbose {
+		return
+	}
+
+	message(text, args)
+}
+
+func message(text string, args ...interface{}) {
+
+	// append newline character
+	if !strings.HasSuffix(text, "\n") {
+		text += "\n"
+	}
+
+	fmt.Printf(text, args...)
 }

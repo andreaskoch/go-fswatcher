@@ -12,6 +12,7 @@ import (
 const (
 	defaultRecurse = false
 	defaultCommand = ""
+	defaultVerbose = false
 )
 
 type WatcherSettings struct {
@@ -19,6 +20,8 @@ type WatcherSettings struct {
 	Recurse bool
 
 	Command string
+
+	Verbose bool
 }
 
 var Settings WatcherSettings = WatcherSettings{}
@@ -36,4 +39,6 @@ func init() {
 	flag.BoolVar(&Settings.Recurse, "recurse", defaultRecurse, "A flag indicating whether to recurse or not")
 
 	flag.StringVar(&Settings.Command, "command", defaultCommand, "A command that will be executed every time something changed")
+
+	flag.BoolVar(&Settings.Verbose, "verbose", defaultRecurse, "A flag for enabling verbose output")
 }
