@@ -4,8 +4,6 @@
 
 package main
 
-// la di da
-
 import (
 	"bufio"
 	"flag"
@@ -18,10 +16,6 @@ import (
 	"strings"
 )
 
-var (
-	workingDirectory string
-)
-
 const (
 	VERSION = "0.1.0"
 )
@@ -29,17 +23,6 @@ const (
 var usage = func() {
 	message("Usage of %s:\n", os.Args[0])
 	flag.PrintDefaults()
-}
-
-func init() {
-
-	// determine the current working directory
-	wd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	workingDirectory = wd
-
 }
 
 func main() {

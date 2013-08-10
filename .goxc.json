@@ -10,7 +10,7 @@
 			"id": "go-fswatcher"
 		},
 		"downloads-page": {
-			"fileheader": "---\nlayout: default\ntitle: Download allmark\n---\n\nNote: please use 'go get -u github.com/andreaskoch/go-fswatcher' instead of these binaries.",
+			"fileheader": "---\nlayout: default\ntitle: Download go-fswatcher\n---\n\nNote: please use 'go get -u github.com/andreaskoch/go-fswatcher' instead of these binaries.",
 			"filename": "download.md"
 		},
 		"pkg-build": {
