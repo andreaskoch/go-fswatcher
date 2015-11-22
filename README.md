@@ -36,6 +36,10 @@ go-fswatcher -path $GOPATH/src/github.com/andreaskoch/allmark -recurse -command 
 
 [![Build Status](https://travis-ci.org/andreaskoch/go-fswatcher.png?branch=master)](https://travis-ci.org/andreaskoch/go-fswatcher)
 
+## Dependencies
+
+- [github.com/andreaskoch/go-fswatch](https://github.com/andreaskoch/go-fswatch) for monitoring the filesystem for changes
+
 ## Contribute
 
 If you have an idea how to make this little tool better please send me a message or a pull request.
