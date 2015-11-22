@@ -18,7 +18,7 @@ import (
 
 const (
 	// VERSION contains the version number of the application
-	VERSION = "0.1.0"
+	VERSION = "0.2.0"
 )
 
 const checkIntervalInSeconds = 2
