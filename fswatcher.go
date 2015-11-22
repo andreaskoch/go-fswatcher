@@ -4,8 +4,6 @@
 
 package main
 
-// la di da
-
 import (
 	"bufio"
 	"flag"
@@ -18,28 +16,16 @@ import (
 	"strings"
 )
 
-var (
-	workingDirectory string
+const (
+	// VERSION contains the version number of the application
+	VERSION = "0.2.0"
 )
 
-const (
-	VERSION = "0.1.0"
-)
+const checkIntervalInSeconds = 2
 
 var usage = func() {
 	message("Usage of %s:\n", os.Args[0])
 	flag.PrintDefaults()
-}
-
-func init() {
-
-	// determine the current working directory
-	wd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	workingDirectory = wd
-
 }
 
 func main() {
@@ -103,7 +89,7 @@ func main() {
 
 			userInput, err := input.ReadString('\n')
 			if err != nil {
-				fmt.Println("%s\n", err)
+				fmt.Printf("%s\n", err)
 			}
 
 			if command := strings.ToLower(strings.TrimSpace(userInput)); command == "stop" {
@@ -132,12 +118,13 @@ func watchDirectory(directory string, recurse bool, commandText string, stop cha
 	}
 
 	go func() {
-		folderWatcher := fswatch.NewFolderWatcher(directory, recurse, skipFiles).Start()
+		folderWatcher := fswatch.NewFolderWatcher(directory, recurse, skipFiles, checkIntervalInSeconds)
+		folderWatcher.Start()
 
 		for folderWatcher.IsRunning() {
 
 			select {
-			case <-folderWatcher.Change:
+			case <-folderWatcher.Modified():
 				debug("Directory %q changed.", directory)
 
 				go func() {
@@ -148,7 +135,7 @@ func watchDirectory(directory string, recurse bool, commandText string, stop cha
 				debug("Stopping directory watcher for %q.", directory)
 				folderWatcher.Stop()
 
-			case <-folderWatcher.Stopped:
+			case <-folderWatcher.Stopped():
 				break
 			}
 		}
@@ -162,19 +149,20 @@ func watchFile(file string, commandText string, stop chan bool) {
 	directory := filepath.Dir(file)
 
 	go func() {
-		fileWatcher := fswatch.NewFileWatcher(file).Start()
+		fileWatcher := fswatch.NewFileWatcher(file, checkIntervalInSeconds)
+		fileWatcher.Start()
 
 		for fileWatcher.IsRunning() {
 
 			select {
-			case <-fileWatcher.Modified:
+			case <-fileWatcher.Modified():
 				debug("File %q has been modified.", file)
 
 				go func() {
 					execute(directory, commandText)
 				}()
 
-			case <-fileWatcher.Moved:
+			case <-fileWatcher.Moved():
 				debug("File %q has been moved.", file)
 
 				go func() {
@@ -185,7 +173,7 @@ func watchFile(file string, commandText string, stop chan bool) {
 				debug("Stopping file watcher for %q.", file)
 				fileWatcher.Stop()
 
-			case <-fileWatcher.Stopped:
+			case <-fileWatcher.Stopped():
 				break
 			}
 		}
@@ -221,7 +209,7 @@ func getCmd(directory, commandText string) *exec.Cmd {
 	commandName := components[0]
 
 	// get the command arguments
-	arguments := make([]string, 0)
+	var arguments []string
 	if len(components) > 1 {
 		arguments = components[1:]
 	}

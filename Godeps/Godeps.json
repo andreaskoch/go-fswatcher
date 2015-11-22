@@ -1,0 +1,11 @@
+{
+	"ImportPath": "github.com/andreaskoch/go-fswatcher",
+	"GoVersion": "go1.5",
+	"Deps": [
+		{
+			"ImportPath": "github.com/andreaskoch/go-fswatch",
+			"Comment": "v1.0.0-3-g189a690",
+			"Rev": "189a6902966f49b337f20e663a44176e99f2b76c"
+		}
+	]
+}

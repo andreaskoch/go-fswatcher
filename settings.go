@@ -40,5 +40,5 @@ func init() {
 
 	flag.StringVar(&Settings.Command, "command", defaultCommand, "A command that will be executed every time something changed")
 
-	flag.BoolVar(&Settings.Verbose, "verbose", defaultRecurse, "A flag for enabling verbose output")
+	flag.BoolVar(&Settings.Verbose, "verbose", defaultVerbose, "A flag for enabling verbose output")
 }
